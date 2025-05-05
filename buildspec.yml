@@ -1,1 +1,38 @@
+version: 0.2
 
+phases:
+  install:
+    runtime-versions:
+      php: 8.2
+      nodejs: 18
+    commands:
+      - echo "Installing Composer..."
+      - curl -sS https://getcomposer.org/installer | php
+      - mv composer.phar /usr/local/bin/composer
+      - echo "Installing PHP dependencies..."
+      - composer install --no-interaction --prefer-dist --optimize-autoloader
+      - echo "Installing Node dependencies..."
+      - npm ci
+
+  pre_build:
+    commands:
+      - echo "Running Laravel pre-build steps..."
+      - cp .env.example .env
+      - php artisan key:generate
+      - php artisan config:clear
+      - php artisan config:cache
+
+  build:
+    commands:
+      - echo "Building front-end assets with Vite..."
+      - npm run build
+
+  post_build:
+    commands:
+      - echo "Preparing artifacts for deployment..."
+      - mkdir -p build
+      - zip -r build/laravel-app.zip . -x "node_modules/*" "tests/*" "build/*"
+
+artifacts:
+  files:
+    - build/laravel-app.zip
