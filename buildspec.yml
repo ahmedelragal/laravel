@@ -15,6 +15,7 @@ phases:
     commands:
       - echo "Running Laravel pre-build steps..."
       - cp .env.example .env
+      - ls -la
       - php artisan key:generate
       - php artisan config:clear
       - php artisan config:cache
