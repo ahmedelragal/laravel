@@ -4,42 +4,39 @@ phases:
   install:
     runtime-versions:
       php: 8.2
-      nodejs: 18
     commands:
       - echo "Installing Composer..."
-      - curl -sS https://getcomposer.org/installer | php
-      - mv composer.phar /usr/local/bin/composer
-      - echo "Installing PHP dependencies..."
-      - composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      # Optional: Install frontend dependencies if you use Laravel Mix/Vite
-      - echo "Installing Node.js dependencies..."
-      - npm install
-      - npm run build
+      - php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      - php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+      - composer --version
 
   pre_build:
     commands:
-      - echo "Running Laravel pre-build steps..."
-      - cp .env.example .env
-      - ls -la
+      - echo "Installing dependencies..."
+      - composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+      - echo "Generating Laravel environment file..."
+      - |
+        cat > .env <<EOF
+        APP_NAME=Laravel
+        APP_ENV=${APP_ENV}
+        APP_KEY=
+        APP_DEBUG=${APP_DEBUG}
+        APP_URL=${APP_URL}
+        EOF
+
+      - echo "Generating application key..."
       - php artisan key:generate
-      - php artisan config:clear
+
+      - echo "Caching Laravel configs..."
       - php artisan config:cache
-      - php artisan route:cache
       - php artisan view:cache
-      - mkdir -p storage/framework/{cache,sessions,views}
-      - chmod -R 775 storage bootstrap/cache
 
   build:
     commands:
-      - echo "Build phase (nothing custom here)..."
-
-  post_build:
-    commands:
-      - echo "Preparing build artifacts..."
-      - mkdir -p build
-      - zip -r build/laravel-app.zip . -x "node_modules/*" "tests/*" "build/*" ".git/*"
+      - echo "Zipping application for deployment..."
+      - zip -r application.zip . -x "vendor/*" ".git/*" ".gitignore" ".env*" "tests/*" "node_modules/*" "*.md"
 
 artifacts:
   files:
-    - build/laravel-app.zip
+    - application.zip
